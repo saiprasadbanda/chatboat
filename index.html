@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Bootstrap Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+  <script>
+    
+    //Declaring attributes
+    var input_id = '?input_id';
+    var question_id = '?question_id';
+    var input_type = '?input_type';
+    var input_class = '?input_class';
+    var input_value = '?input_value';
+    var label = '?label';
+    var question_answer = '?question_answer';
+    var next_question_id = '?next_question_id';
+    var skip_question_id = '?skip_question_id';
+    //Declaring htmls
+    var p = '<p>';
+    var pc = '</p>';
+    var div_close = '</div>'
+    var label_close = '</label>'
+    var div_row = '<div class="row">';
+    var div_form_group = '<div class="form-group">';
+    var div_col_6 = '<div class="col-6">';
+    var div_col_sm_4 = '<div class="col-sm-4">';
+    var div_chat_box_left = '<div class="chat-box-left highlighted" id="chat_box_q_'+question_id+'" style="background:#e8f6ec;border-radius:20px;padding:10px 20px;">';
+    var div_chat_box_right = '<div class="row"><div class="col-6"></div><div class="col-6"><div class="chat-box-right" id="chat_box_a_'+question_id+'"  style="background:#c4c4c4;border-radius:20px;padding:10px 20px;"><p>?answere</p></div></div></div>';
+    var div_col_sm_4_form_check = '<div class="col-sm-4"><div class="form-check"><label class="form-check-label" for="check_'+input_id+'">';
+    var div_col_sm_4_form_radio = '<div class="col-sm-4"><div class="form-check"><label class="form-check-label" for="radio_'+input_id+'">';
+    var input_field = '<input type="'+input_type+'" class="'+input_class+'" id="check_'+input_id+'" name="check_'+input_id+'" value="'+input_value+'" >'+input_value;
+    var select_field = '<select class="'+input_class+'" id="select_'+input_id+'" name="select'+input_id+'">';
+    var select_option = '<option value="'+input_value+'">'+input_value+'</option>';
+    var select_close = '</select>';
+    var next_qn = '<button class="form-group next_qn" onclick="saveAnswere(?qid)" id="next_'+question_id+'">Next Question</button>';
+    var skip_qn = '<button class="form-group skip_qn" onclick="skipAnswere(?qid)" id="skip_'+question_id+'">Skip</button><p id="error_?qid" class="text-danger">please select answere</p>';
+     
+    var API_URL = 'http://localhost/chatboat/rest/index.php/';
+    var id_question = 0;
+    var question_type = '-';
+    var question_short_text = '-';
+    //set to 0 to get first question, later it is incremented to get next questions
+    var offset = 0;
+	/*window.setInterval(function() {
+		var elem = document.getElementById('main_container');
+		elem.scrollTop = elem.scrollHeight;
+	}, 500);*/
+
+    function httpPostData(URL,DATA){
+      //URL is = Service, Data = post data in json
+      var response_data;
+      $.ajax({
+        url: URL,
+        type: "POST",
+        dataType:'json',
+        async: false,
+        data: DATA,
+        success: function(res){
+          response_data = res;
+        },
+        error: function (res) {
+          response_data = res;
+        }
+      });
+      return response_data;
+    }
+    function httpGetData(URL){
+      //URL is = Service and it includes data
+      var response_data;
+      $.ajax({
+        url: URL,
+        type: "GET",
+        dataType: 'json',
+        async: false,
+        success: function(res){
+          response_data = res;
+        },
+        error: function (res) {
+          response_data = res;
+        }
+      });
+      return response_data;
+    }
+    function getQuestion(question){
+      // console.log('question obj', question);
+      if(question.data.length == 0)
+        return;//No Questions Remain in Database
+      question_data = question.data;        
+      question_data = question_data[0];
+      id_question = question_data.id;
+      question_type = question_data.question_type;
+      input_id = 'input_'+question_data.id;
+      question_short_text = question_data.question_short_text;
+      var html = '';
+      if(question_data.question_type == 'input'){
+        //console.log('question_type', question_data.question_type);
+        input_type = 'text';
+        
+        // question_answer = 'question_answer';
+        html += div_row+div_col_6+div_chat_box_left.replace("?question_id",question_data.id);
+        html += p+question_data.question_text+pc;
+        
+        $('#input_ans').removeAttr('disabled', 'disabled');
+        $('#send_message').removeAttr('disabled', 'disabled');         
+      }
+      else{
+        //disabling the bottom text box and send button if the question type is not input
+        $('#input_ans').attr('disabled', 'disabled');
+        $('#send_message').attr('disabled', 'disabled');
+        
+        if(question_data.question_type == 'dropdown'){
+          //console.log('question_type', question_data.question_type);
+          input_type = 'text';
+          
+          // question_answer = 'question_answer';
+          html += div_row+div_col_6+div_chat_box_left.replace("?question_id",question_data.id);
+          html += p+question_data.question_text+pc;
+          html += div_row+div_col_sm_4+div_form_group+select_field.replace("?input_class","form-control").replace("?input_id",question_data.id);
+          var question_options = question_data.question_options;
+          for(var j = 0; j < question_options.length; j++){
+            // console.log(j+' question_options[j]', select_option.replace("?input_value",question_options[j].option_name).replace("?input_value",question_options[j].option_name));
+            if(question_options[j].option_name != undefined)
+              html += select_option.replace("?input_value",question_options[j].option_name).replace("?input_value",question_options[j].option_name);
+          }
+          html += select_close+div_close+div_close+div_close;
+          
+        }
+        if(question_data.question_type == 'checkbox'){
+          //console.log('question_type', question_data.question_type);
+          input_type = 'checkbox';
+          var html = '';
+          // question_answer = 'question_answer';
+          html += div_row+div_col_6+div_chat_box_left.replace("?question_id",question_data.id);
+          html += p+question_data.question_text+pc;
+          html += div_row;
+          var question_options = question_data.question_options;
+          for(var j = 0; j < question_options.length; j++){
+
+            html += div_col_sm_4_form_check.replace("?input_id",question_data.id);
+            html += input_field.replace("?input_type",input_type).replace("?input_class","form-check-input check_box_"+id_question).replace("?input_id",id_question+"_"+question_options[j].id).replace("?input_id",id_question).replace("?input_value",question_options[j].option_name).replace("?input_value",question_options[j].option_name);
+            html += label_close+div_close+div_close;
+          }
+          html += div_close;
+        }
+        if(question_data.question_type == 'radio'){
+          //console.log('question_type', question_data.question_type);
+          //console.log('question_type', question_data.question_type);
+          input_type = 'radio';
+          var html = '';
+          // question_answer = 'question_answer';
+          html += div_row+div_col_6+div_chat_box_left.replace("?question_id",question_data.id);
+          html += p+question_data.question_text+pc;
+          html += div_row;
+          var question_options = question_data.question_options;
+          for(var j = 0; j < question_options.length; j++){
+
+            html += div_col_sm_4_form_radio.replace("?input_id",question_data.id);
+            html += input_field.replace("?input_type",input_type).replace("?input_class","form-check-input").replace("check_?input_id","radio_"+question_data.id+"_"+question_options[j].id).replace("check_?input_id","radio_"+question_data.id).replace("?input_value",question_options[j].option_name).replace("?input_value",question_options[j].option_name);
+            html += label_close+div_close+div_close;
+          }
+          html += div_close;
+          
+        }
+      }
+      
+      if(question_type != 'input'){
+        html += next_qn.replace("?question_id",id_question).replace("?qid",id_question).replace("?qtype",question_type);
+      }
+      html += skip_qn.replace("?question_id",id_question).replace("?qid",id_question).replace("?qtype",question_type).replace("?qid",id_question);
+      html += div_close+div_close;
+      html += div_col_6+div_close+div_close;
+      $("#main_container").append(html);
+      //auto scroll on adding element
+        var elem = document.getElementById('main_container');
+        elem.scrollTop = elem.scrollHeight;
+      $('#error_'+id_question).hide();
+      if(!parseInt(question_data.optional)){
+        $('#skip_'+id_question).attr('disabled', 'disabled');
+        console.log('question_option', '#skip_'+id_question );
+      }
+    }
+    function saveAnswere(ans){
+      var candidate_name = $('#candidate_name').val();
+      // console.log('ans', id_question);
+      // console.log('type', type);
+      // console.log('candidate_name', candidate_name);
+      
+      if(question_type == 'input'){
+        var answer_obj = {question_text:question_short_text,question_answer:ans,candidate_name:candidate_name};
+      }
+      if(question_type == 'dropdown'){
+        ans = $('#select_'+id_question).val();
+        var answer_obj = {question_text:question_short_text,question_answer:ans,candidate_name:candidate_name};
+      }
+      if(question_type == 'radio'){
+        ans = $('input[name=radio_'+id_question+']:checked').val();
+        var answer_obj = {question_text:question_short_text,question_answer:ans,candidate_name:candidate_name};
+      }
+      if(question_type == 'checkbox'){
+        var ans = '';
+        $.each($('input[name=check_'+id_question+']:checked'), function(){
+          ans += ','+$(this).val();
+        });
+        var answer_obj = {question_text:question_short_text,question_answer:ans.slice(1),candidate_name:candidate_name};
+      }
+      // console.log('question_type', question_type);
+      // console.log('answer_obj', answer_obj);
+      // console.log('answer_obj.question_answer', answer_obj.question_answer);
+      // console.log('answer_obj.question_answer.length', answer_obj.question_answer.length);
+      if(answer_obj.question_answer == undefined){
+        console.log('condition undefined');
+        $('#error_'+id_question).show();
+        //return false;
+      }else if(answer_obj.question_answer.length == 0){
+        console.log('condition length == 0');
+        $('#error_'+id_question).show();
+        //return false;
+      }else{
+        offset++;//Incrementing offset to get next question.
+        var post_result = httpPostData(API_URL+'Signup/saveAnswer',answer_obj);
+        // console.log('post_result', post_result.status);
+        if(post_result.status){
+          var html = div_chat_box_right.replace("?question_id",id_question).replace("?answere",answer_obj.question_answer);
+          $("#main_container").append(html);
+        //auto scroll on adding element
+          var elem = document.getElementById('main_container');
+          elem.scrollTop = elem.scrollHeight;
+          $('#error_'+id_question).hide();
+          $('#next_'+id_question).attr('disabled',true);
+          $('#skip_'+id_question).attr('disabled',true);
+          getQuestion(httpGetData(API_URL+'Signup/getUserQuestions?offset='+offset+'&limit=1'));
+        }
+      }
+    }
+    function skipAnswere(answer,type){
+      var candidate_name = $('#candidate_name').val();
+      offset++;//Incrementing offset to get next question.
+      // console.log('answere', answer);
+      // console.log('type', type);      
+      var answer_obj = {question_text:question_short_text,question_answer:"You skipped this question.!",candidate_name:candidate_name};
+      var post_result = httpPostData(API_URL+'Signup/saveAnswer',answer_obj);
+      // console.log('post_result', post_result.status);
+      if(post_result.status){
+        var html = div_chat_box_right.replace("?question_id",id_question).replace("?answere",answer_obj.question_answer);
+        $("#main_container").append(html);
+        //auto scroll on adding element
+          var elem = document.getElementById('main_container');
+          elem.scrollTop = elem.scrollHeight;
+        $('#error_'+id_question).hide();
+        $('#next_'+id_question).attr('disabled',true);
+        $('#skip_'+id_question).attr('disabled',true);
+        getQuestion(httpGetData(API_URL+'Signup/getUserQuestions?offset='+offset+'&limit=1'));
+      }
+    }
+      //declare_variables();
+    $(document).ready(function() {      
+      
+      //Getting first question
+      var question = httpGetData(API_URL+'Signup/getUserQuestions?offset='+offset+'&limit=1');
+      //console.log('question.option length', question.data[0].question_options.length);
+      // $('#input_ans').attr('disabled', 'disabled');
+      // $('#send_message').attr('disabled', 'disabled');
+      $('#start').attr('disabled',true);//Default start button is disabled until the candidate types his name      
+      $('#input_ans').attr('disabled',true);
+      $('#send_message').attr('disabled',true);
+      $('#candidate_name').keypress(function() {
+          var candidate_name = this.value;
+          // console.log(dInput);
+          if(candidate_name.length >= 3)
+            $('#start').attr('disabled',false);
+          else
+            $('#start').attr('disabled',true);
+      });
+      $('#start').click(function(){
+        //Disabling the name box and start button not to change once started
+          $('#start').attr('disabled',true);
+          $('#candidate_name').attr('disabled',true);
+          getQuestion(question);//Calling function to buuld question
+      });
+      $('#input_ans').on("keypress keyup keydown", function(e) {
+        //console.log('after enter', $('#input_ans').val().length);
+        if($('#input_ans').val().length > 0)
+          $('#send_message').attr('disabled',false);
+        else
+          $('#send_message').attr('disabled',true);
+        if (e.keyCode == 13) {
+            saveAnswere(this.value);
+            $('#input_ans').val('').attr('disabled',true);
+            $('#send_message').attr('disabled',true);
+        }
+      });
+      $('#send_message').click(function(){
+        // console.log('id_question', id_question);
+        saveAnswere($('#input_ans').val());
+        $('#input_ans').val('').attr('disabled',true);
+        $('#send_message').attr('disabled',true);
+      });
+      
+      
+    });
+    
+  </script>
+</head>
+<body>
+
+<div class="container p-0" id="name_container" style="background: cadetblue; border-top-left-radius:10px;border-top-right-radius:10px; ">
+    <div class="row" style="padding: 20px 40px 0px 60px;">
+      <div class="col-sm-4">
+        <input type="text" style="padding: 10px;" class="form-control" id="candidate_name" name="candidate_name" placeholder="Type your Name and click Start">
+      </div>
+      <div class="col-sm-4">
+        <button class="btn btn-dark" style="padding: 5px 15px 5px 15px;" id="start" >Start</button>
+      </div>
+      </div>
+      <span id="log"></span>
+</div>
+<div class="container " id="main_container" style="padding: 20px 40px 0px 60px;height: 500px;
+overflow-y: scroll;background: cadetblue; ">
+  <!-- content to be appended here -->
+
+  
+
+</div>
+<div class="container p-0" id="sub_container" style=" background: cadetblue; border-bottom-left-radius:10px;border-bottom-right-radius:10px; ">
+    <div class="row" style="padding: 20px 40px 10px 60px;">
+      <input type="text" style="padding: 10px;" class="form-control col-sm-11" id="input_ans" name="input_ans" placeholder="Type your answer">
+      <button class="btn btn-dark" style="padding: 2px 8px 2px 5px;" id="send_message" name="send_message">
+        <i class="fa fa-paper-plane fa-2x send_message" aria-hidden="false"></i>
+      </button>
+    </div>
+</div>
+
+</body>
+</html>
